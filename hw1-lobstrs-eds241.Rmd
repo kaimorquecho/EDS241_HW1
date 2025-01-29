@@ -1,16 +1,14 @@
 ---
-title: "Assignment 1: California Spiny Lobster Abundance (*Panulirus Interruptus*)"
-subtitle: "Assessing the Impact of Marine Protected Areas (MPAs) at 5 Reef Sites in Santa Barbara County"
+title: 'Assignment 1: California Spiny Lobster Abundance (*Panulirus Interruptus*)'
 author: "Kaiju Morquecho"
 date: "1/8/2024 (Due 1/26)"
-output: 
-    html_document:
-      theme: flatly
+output:
+  pdf_document: default
+  html_document:
+    theme: flatly
+subtitle: Assessing the Impact of Marine Protected Areas (MPAs) at 5 Reef Sites in
+  Santa Barbara County
 ---
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(eval=FALSE, warning = FALSE, message = FALSE )
-```
 
 ------------------------------------------------------------------------
 
@@ -31,8 +29,7 @@ knitr::opts_chunk$set(eval=FALSE, warning = FALSE, message = FALSE )
 -  Your knitted presentation should meet the quality you'd submit to research colleagues or feel confident sharing publicly. Refer to the rubric for details about presentation standards.
 
 
-**Assignment submission (YOUR NAME):** ______________________________________
-
+**Assignment submission (YOUR NAME):** ___Kaiju Morquecho ___
 
 ----------------------------------------------------------------------
 
@@ -50,6 +47,7 @@ library(MASS) ## NOTE: The `select()` function is masked. Use: `dplyr::select()`
 library(interactions) 
 library(ggridges)
 library(ggrepel)
+library(dplyr)
 
 ```
 
@@ -186,7 +184,7 @@ site_mean <- spiny_counts %>%
 Create plots displaying the distribution of lobster **counts**:
 
 1) grouped by MPA status  
-```{r}
+```{r, eval=TRUE}
 
 density_plot <- spiny_counts %>%
   ggplot(aes(x = counts, fill = mpa)) +
@@ -209,10 +207,10 @@ density_plot <- spiny_counts %>%
         panel.grid = element_line(color = "white",
                                   linewidth = 0.02),
         panel.background = element_rect(fill = "black")) +
-  labs(title = "lobster counts by MPA status",
+  labs(title = "Lobster counts by MPA status",
        x = "Lobster count", 
        y = "Density",
-       fill = "Ree") +
+       fill = "Reef") +
   scale_fill_manual(values =c("indianred2",
                               "seagreen2")) +
   scale_color_manual(values =c("indianred2",
@@ -298,8 +296,8 @@ Create a plot of lobster **size** :
 ```{r}
 # plot 1: ....
 
-spiny_counts %>% 
-ggplot()
+# spiny_counts %>% 
+# ggplot()
     
 ```
 
@@ -320,9 +318,9 @@ Step 4: OLS regression- building intuition
 ```{r}
 # NOTE: We will not evaluate/interpret model fit in this assignment (e.g., R-square)
 
-m1_ols <- 
-
-summ(m1_ols, model.fit = FALSE) 
+# m1_ols <- 
+# 
+# summ(m1_ols, model.fit = FALSE) 
 
 ```
 
@@ -331,22 +329,22 @@ summ(m1_ols, model.fit = FALSE)
 **d.** Explain the results of the 4 diagnostic plots. Why are we getting this result?
 
 ```{r}
-check_model(m1_ols,  check = "qq" )
+# check_model(m1_ols,  check = "qq" )
 ```
 
 
 ```{r}
-check_model(m1_ols, check = "normality")
+# check_model(m1_ols, check = "normality")
 ```
 
 
 ```{r}
-check_model(m1_ols, check = "homogeneity")
+# check_model(m1_ols, check = "homogeneity")
 ```
 
 
 ```{r}
-check_model(m1_ols, check = "pp_check")
+# check_model(m1_ols, check = "pp_check")
 ```
 
 ------------------------------------------------------------------------
@@ -366,7 +364,7 @@ Step 5: Fitting GLMs
 
 #HINT2: For the second glm() argument `family` use the following specification option `family = poisson(link = "log")`
 
-m2_pois <- 
+# m2_pois <- 
 
 ```
 
@@ -375,15 +373,15 @@ m2_pois <-
 **f.** Conduct tests for over-dispersion & zero-inflation. Explain results.
 
 ```{r}
-check_model(m2_pois)
+# check_model(m2_pois)
 ```
 
 ```{r}
-check_overdispersion(m2_pois)
+# check_overdispersion(m2_pois)
 ```
 
 ```{r}
-check_zeroinflation(m2_pois)
+# check_zeroinflation(m2_pois)
 ```
 
 **g.** Fit a negative binomial model using the function glm.nb() from the package `MASS` and check model diagnostics 
@@ -396,25 +394,25 @@ check_zeroinflation(m2_pois)
 
 # NOTE: The `glm.nb()` function does not require a `family` argument
 
-m3_nb <- 
+# m3_nb <- 
 
 ```
 
 
 ```{r}
-check_overdispersion(m3_nb)
+# check_overdispersion(m3_nb)
 ```
 
 ```{r}
-check_zeroinflation(m3_nb)
+# check_zeroinflation(m3_nb)
 ```
 
 ```{r}
-check_predictions(m3_nb)
+# check_predictions(m3_nb)
 ```
 
 ```{r}
-check_model(m3_nb)
+# check_model(m3_nb)
 ```
 
 
@@ -428,9 +426,9 @@ Step 6: Compare models
 
 ```{r}
 
-export_summs(# ADD MODELS
-             model.names = c("OLS","Poisson", "NB"),
-             statistics = "none")
+# export_summs(# ADD MODELS
+#              model.names = c("OLS","Poisson", "NB"),
+#              statistics = "none")
 
 ```
 
@@ -451,17 +449,17 @@ Step 7: Building intuition - fixed effects
 
 ```{r}
 
-ff_counts <- spiny_counts %>% 
-    mutate(year=as_factor(year))
-    
-m5_fixedeffs <- glm.nb(
-    counts ~ 
-        treat +
-        year +
-        treat*year,
-    data = ff_counts)
-
-summ(m5_fixedeffs, model.fit = FALSE)
+# ff_counts <- spiny_counts %>% 
+#     mutate(year=as_factor(year))
+#     
+# m5_fixedeffs <- glm.nb(
+#     counts ~ 
+#         treat +
+#         year +
+#         treat*year,
+#     data = ff_counts)
+# 
+# summ(m5_fixedeffs, model.fit = FALSE)
 ```
 
 **e.** Look at the model predictions: Use the `interact_plot()` function from package `interactions` to plot mean predictions by year and treatment status. 
@@ -470,8 +468,8 @@ summ(m5_fixedeffs, model.fit = FALSE)
 
 ```{r}
 
-interact_plot(m5_fixedeffs, pred = year, modx = treat,
-              outcome.scale = "link") # NOTE: y-axis on log-scale
+# interact_plot(m5_fixedeffs, pred = year, modx = treat,
+#               outcome.scale = "link") # NOTE: y-axis on log-scale
 
 # HINT: Change `outcome.scale` to "response" to convert y-axis scale to counts
 ```
@@ -488,7 +486,7 @@ The plot should have...
 # Hint 1: Group counts by `year` and `mpa` and calculate the `mean_count`
 # Hint 2: Convert variable `year` to a factor
 
-plot_counts <- 
+# plot_counts <- 
 
 # plot_counts %>% ggplot() ...
 ```
