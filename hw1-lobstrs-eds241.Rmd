@@ -232,9 +232,13 @@ jitter_plot <- spiny_counts %>%
   ggplot(aes(x = year, y = counts, 
              fill = year)) +
   geom_jitter(width = 0.3,
-              alpha = 0.9,
+              alpha = 0.5,
               shape = 21,
               size = 3) +
+  stat_summary(fun = "mean",
+               geom = "crossbar",
+               color = "black",
+               fill = "white") +
   theme_bw() +
   theme(text = element_text(family = "courier",
                             color = "white"),
@@ -254,7 +258,8 @@ jitter_plot <- spiny_counts %>%
                                   "plum2", 
                                   "seagreen2",
                                   "hotpink",
-                                  "deepskyblue1"))
+                                  "deepskyblue1")) +
+  coord_flip()
 
 print(jitter_plot)
 
@@ -265,24 +270,26 @@ print(jitter_plot)
 violin_plot <- spiny_counts %>%
   ggplot(aes(x = site, y = counts, 
              fill = site)) +
-  geom_violin(alpha = 0.6,
-              width = 1.5) +  
+  geom_violin(alpha = 0.9,
+              width = 1.2) +  
   labs(title = "Lobster counts by reef site",
        fill = "Site",
        x = "Site", 
        y = "Lobster count") +
-  stat_summary(fun = "median", 
-               geom = "crossbar",
-               colour = "black", 
-               width = 0.2,
-               length = 5,
-               show.legend = FALSE) +
-  legend_add
+  stat_summary(
+    aes(label = paste0("Mdn:","",round(..y.., 1))),
+    size = 3,
+    family = "courier",
+    fun = "median",
+    geom = "text",
+    colour = "black",
+    show.legend = FALSE) +
   scale_fill_manual(values = c(
     "indianred2", "cornflowerblue", "gold1", "plum2", "seagreen2"
   )) +
   scale_color_manual(values = c(
     "indianred2", "cornflowerblue", "gold1", "plum2", "seagreen2"))+
+  scale_y_continuous(breaks = seq(0,300,25)) +
   theme_bw() +
   theme(text = element_text(family = "courier",
                             color = "white"),
@@ -292,13 +299,13 @@ violin_plot <- spiny_counts %>%
         panel.grid = element_line(color = "black",
                                   linewidth = 0.1),
         panel.background = element_rect(fill = "white"),
-        plot.background = element_rect(fill = "black")) 
+        plot.background = element_rect(fill = "black")) +
+  coord_flip()
   
 
 print(violin_plot)
 
 ```
-3) grouped by year
 
 Create a plot of lobster **size** :
 
@@ -315,7 +322,10 @@ Create a plot of lobster **size** :
 **c.** Compare means of the outcome by treatment group. Using the `tbl_summary()` function from the package [`gt_summary`](https://www.danieldsjoberg.com/gtsummary/articles/tbl_summary.html) 
 
 ```{r}
-# USE: gt_summary::tbl_summary()
+tbl_summary(data = spiny_counts,
+            by = "mpa",
+            statistic = list(all_continuous() ~ "{mean}"),
+            include = "site")
 ```
 
 ------------------------------------------------------------------------
@@ -324,49 +334,69 @@ Step 4: OLS regression- building intuition
 
 **a.** Start with a simple OLS estimator of lobster counts regressed on treatment. Use the function `summ()` from the [`jtools`](https://jtools.jacob-long.com/) package to print the OLS output
 
-**b.** Interpret the intercept & predictor coefficients *in your own words*. Use full sentences and write your interpretation of the regression results to be as clear as possible to a non-academic audience.
-
 ```{r}
 # NOTE: We will not evaluate/interpret model fit in this assignment (e.g., R-square)
 
-# m1_ols <- 
-# 
-# summ(m1_ols, model.fit = FALSE) 
+m2_pois <- lm(counts ~ treat,
+             data = spiny_counts) 
+
+tbl_1 <- summ(model = m2_pois,
+     model.fit = FALSE) 
+
+print(tbl_1)
 
 ```
+**b.** Interpret the intercept & predictor coefficients *in your own words*. Use full sentences and write your interpretation of the regression results to be as clear as possible to a non-academic audience.
+
+The intercept = 22.73 is what the lm model estimates the lobster count will be when the treatment is not being applied (when the site is not an MPA site). The predictor coeffient = 5.36 tells us that when the treatment IS applied (the site is an MPA) the estimated lobster count will increase from 22.73 by 5.36. The predictor tells us that sites that are MPAs have a positive effect on lobster counts (lobsters are more abundant).
 
 **c.** Check the model assumptions using the `check_model` function from the `performance` package
 
 **d.** Explain the results of the 4 diagnostic plots. Why are we getting this result?
 
 ```{r}
-# check_model(m1_ols,  check = "qq" )
+check_model(m2_pois, check = "qq" )
 ```
-
+**QQ plot explanation**
+The straight line represents a normal distribution and the model's residuals diverge significantly from it. There is a noticeable pattern in our residuals when the distribution of normal residuals should have no pattern/be randomly distributed. This tells us we are more than likely using the wrong model for our data and we are not capturing the effect of possible patterns in it.
 
 ```{r}
-# check_model(m1_ols, check = "normality")
+check_model(m2_pois, check = "normality")
 ```
-
+**Normality of residuals density plot explanation**
+Plot indicates a departure from normality and it allows us to see HOW our model predictions deviate from a normal distribution. Our data is likely skewed (not symmetrically distributed) and has a tail.
 
 ```{r}
-# check_model(m1_ols, check = "homogeneity")
+check_model(m2_pois, check = "homogeneity")
 ```
-
+**Homogeneity of variance plot explanation** 
+This plot shows that the residuals of our fitted values do not display constant variance across all levels, this means that the model does not accurately capture the variability of all levels in our data. 
 
 ```{r}
-# check_model(m1_ols, check = "pp_check")
+check_model(m2_pois, check = "pp_check")
 ```
-
+**Posterior predictive check explanation**
+This plot tells us that the distribution of our model data predictions do not match those that were actually observed. It speaks to a poor model fit. The model does not seem to be accurately representing and replicating the complexity of the observed data.
 ------------------------------------------------------------------------
 
 Step 5: Fitting GLMs
 
 **a.** Estimate a Poisson regression model using the `glm()` function
+```{r}
+m2_pois <- glm(counts ~ treat, 
+                   data = spiny_counts,
+                   family = poisson) 
+
+exp(coef(m2_pois))
+```
 
 **b.** Interpret the predictor coefficient in your own words. Use full sentences and write your interpretation of the results to be as clear as possible to a non-academic audience.
 
+The model estimates how the treatment affects the lobster count of any given site. Meaning, in a reef site that is not an MPA the lobster count is estimated to be aprox. 23. When the treatment is applied (when the reef site is an MPA), model estimates a multiplicative factor of approx. 1.24. This means the model predicts an increase in lobster count when the treatment is applied (when the reef is an MPA)
+
 **c.** Explain the statistical concept of dispersion and overdispersion in the context of this model. 
+
+Dispersion is the spread/distribution of variability around the mean. A poisson model makes the assumption that the mean and variance of the data are equal to each other. Overdispersion in this case would mean that the variability predicted by the model is greater than the mean of the data. This means that the model may not be a good fit - it may not account for all the variability occurring in the data. There may be other interactions at play across sites and lobster counts that are unaccounted for.
 
 **d.** Compare results with previous model, explain change in the significance of the treatment effect
 
@@ -374,8 +404,11 @@ Step 5: Fitting GLMs
 #HINT1: Incidence Ratio Rate (IRR): Exponentiation of beta returns coefficient which is interpreted as the 'percent change' for a one unit increase in the predictor 
 
 #HINT2: For the second glm() argument `family` use the following specification option `family = poisson(link = "log")`
+#
+m2_pois <- glm(counts ~ treat, 
+                   data = spiny_counts,
+                   family = poisson) 
 
-# m2_pois <- 
 
 ```
 
@@ -384,18 +417,31 @@ Step 5: Fitting GLMs
 **f.** Conduct tests for over-dispersion & zero-inflation. Explain results.
 
 ```{r}
-# check_model(m2_pois)
+check_model(m2_pois)
 ```
 
 ```{r}
-# check_overdispersion(m2_pois)
+check_overdispersion(m2_pois)
 ```
 
+**Overdispersion test explanation**
+The test shows a dispersion ratio of 67.033. A dispersion > 1 is considered overdispersion. The p-value of our test is very small, certainly significant. This means that we can confidently say there is more variability in the data than the model can predict.
+
 ```{r}
-# check_zeroinflation(m2_pois)
+check_zeroinflation(m2_pois)
 ```
+
+**Zero-inflation explanation**
+The results of the test say that the model did not predict/account for ANY zeros being present in our data. However, our data did contain 27 observations = 0. This underfitting can result in an inflation of our model estimates (making them inaccurate) and therefore leading to unreliable predictions.
 
 **g.** Fit a negative binomial model using the function glm.nb() from the package `MASS` and check model diagnostics 
+
+```{r}
+m3_nb <- glm.nb(counts ~ treat,
+                data = spiny_counts)
+
+summary(m3_nb)
+```
 
 **h.** In 1-2 sentences explain rationale for fitting this GLM model.
 
