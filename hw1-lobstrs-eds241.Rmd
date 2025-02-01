@@ -214,10 +214,11 @@ density_plot <- spiny_counts %>%
   scale_fill_manual(values =c("indianred2",
                               "seagreen2")) +
   scale_color_manual(values =c("indianred2",
-                              "seagreen2"))+
+                              "seagreen2")) +
   scale_x_continuous(expand = c(0,0),
                      breaks = seq(0,280,30)) +
   scale_y_continuous(expand = c(0,0)) 
+  
  
 
   
@@ -266,8 +267,17 @@ violin_plot <- spiny_counts %>%
              fill = site)) +
   geom_violin(alpha = 0.6,
               width = 1.5) +  
-  labs(title = "lobster counts by reef site",
-       x = "Site", y = "Lobster count") +
+  labs(title = "Lobster counts by reef site",
+       fill = "Site",
+       x = "Site", 
+       y = "Lobster count") +
+  stat_summary(fun = "median", 
+               geom = "crossbar",
+               colour = "black", 
+               width = 0.2,
+               length = 5,
+               show.legend = FALSE) +
+  legend_add
   scale_fill_manual(values = c(
     "indianred2", "cornflowerblue", "gold1", "plum2", "seagreen2"
   )) +
@@ -282,7 +292,8 @@ violin_plot <- spiny_counts %>%
         panel.grid = element_line(color = "black",
                                   linewidth = 0.1),
         panel.background = element_rect(fill = "white"),
-        plot.background = element_rect(fill = "black"))
+        plot.background = element_rect(fill = "black")) 
+  
 
 print(violin_plot)
 
