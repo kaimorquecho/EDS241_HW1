@@ -226,29 +226,28 @@ print(density_plot)
 
 2) grouped by year
 ```{r}
-
 jitter_plot <- spiny_counts %>%
-  ggplot(aes(x = year, y = counts, 
-             fill = year)) +
+  ggplot(aes(x = factor(year),  
+             y = counts, 
+             fill = factor(year))) +  
   geom_jitter(width = 0.3,
               alpha = 0.5,
               shape = 21,
               size = 3,
-              show.legend = FALSE) +
-  stat_summary(fun = "mean",
+              show.legend = FALSE) +  
+  stat_summary(aes(color = " "),
+               fun = "mean",
                geom = "crossbar",
-               color = "black",
-               fill = "white") +
+               fill = "white",
+               size = 0.35,
+               show.legend = TRUE) +  
   labs(title = "Lobster counts by year",
        x = "Year", 
-       y = "Lobster count") +
-  scale_fill_gradientn(colors = c("indianred2", 
-                                  "cornflowerblue",
-                                  "gold1", 
-                                  "plum2", 
-                                  "seagreen2",
-                                  "hotpink",
-                                  "deepskyblue1")) +
+       y = "Lobster count",
+       color = "Mean counts") +  
+  scale_fill_viridis_d(guide = "none") + 
+  scale_color_manual(values = c(" " = "black")) +  
+  scale_y_continuous(breaks = seq(0,300,25)) +
   coord_flip() + 
   theme_bw() +
   theme(text = element_text(color = "white"),
@@ -258,9 +257,11 @@ jitter_plot <- spiny_counts %>%
         panel.grid = element_line(color = "black",
                                   linewidth = 0.1),
         panel.background = element_rect(fill = "white"),
-        plot.background = element_rect(fill = "black"))
+        plot.background = element_rect(fill = "black")) 
 
 print(jitter_plot)
+
+
 
 ```
 
@@ -285,8 +286,8 @@ violin_plot <- spiny_counts %>%
        x = "Site", 
        y = "Lobster count") +
   stat_summary(
-    aes(label = paste0("Mdn:","",round(..y.., 1))),
-    size = 3,
+    aes(label = paste0("Mdn ","",round(..y.., 1))),
+    size = 2,
     fun = "median",
     geom = "text",
     colour = "black",
@@ -324,9 +325,9 @@ spiny_counts %>%
   geom_text(data = medians, 
             aes(x = median_size, 
                 y = site, 
-                label = paste0("Median="," ",(round(median_size, 2)))),
+                label = paste0("Median"," ",(round(median_size, 2)))),
             color = "black", 
-            size = 3, 
+            size = 2, 
             vjust = -0.75) +
   theme(text = element_text(color = "white"),
         axis.text = element_text(color = "white"),
@@ -340,7 +341,7 @@ spiny_counts %>%
     x = "Lobster mean size", 
     y = "Reef site",
     fill = "Site"
-  ) +
+  ) + 
   scale_fill_manual(values = c(
     "indianred2", "cornflowerblue", "gold1", "plum2", "seagreen2"
   )) 
