@@ -233,7 +233,8 @@ jitter_plot <- spiny_counts %>%
   geom_jitter(width = 0.3,
               alpha = 0.5,
               shape = 21,
-              size = 3) +
+              size = 3,
+              show.legend = FALSE) +
   stat_summary(fun = "mean",
                geom = "crossbar",
                color = "black",
