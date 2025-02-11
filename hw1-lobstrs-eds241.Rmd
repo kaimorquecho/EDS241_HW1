@@ -79,9 +79,7 @@ Step 1: Anticipating potential sources of selection bias
 **a.** Do the control sites (Arroyo Quemado, Carpenteria, and Mohawk) provide a strong counterfactual for our treatment sites (Naples, Isla Vista)? Write a paragraph making a case for why this comparison is centris paribus or whether selection bias is likely (be 
 specific!).  
 
-It is unlikely that the comparison between the controls and the treatment sites in this case are centris paribus, at least not perfectly. There are factors at play that we likely have not accounted for. Human factors such as population density inland (near a reef), and environmental factors such as differences in water temperature, food availability, and recent weather events that affect the overall health of the reefs and of its lobsters. Furthermore, we do not know if the conditions within both of the MPAs are themselves centris paribus, nor do we know what the fishing pressures and lobster health conditions were before the reefs were designated as MPAs. These are all factors pointing toward selection bias. 
-
-There are, however, characteristics that make this analysis promising - the 5 reefs geographically relatively close to one another. They likely experience similar ocean currents and temperatures and face similar weather conditions. These are significant in helping mitigate selection bias and make modeling more feasible. 
+The comparison between control and treatment sites in this case is not centris paribus. The designation of the Naples and Isla Vista reefs as MPAs inherently introduces selection bias because these were not randomly treated. In fact, these two MPAs were carefully established based on the input of local divers, people who fished in the area, and other stakeholders and reef-specific concerns. The main goal of these MPAs was to preserve threatened marine ecosystems and protect the endangered species that inhabit them. In short, these reefs were designated as MPAs because of their unique characteristics and sensitive habitats, not at random. Thus, differences in lobster abundance across control and treatment sites may be due to pre-existing ecological conditions that led to the creation of the MPAs in the first place, rather than an effect from the treatment. An unbiased comparison between control and treatment sites is not possible in this case. 
 
 ------------------------------------------------------------------------
 
@@ -131,7 +129,8 @@ spiny_counts <- tidydata %>%
   summarize(mean_size = mean(size_mm, 
                              na.rm = TRUE),
             counts = sum(count,
-                         na.rm = TRUE))
+                         na.rm = TRUE)) %>%
+  ungroup()
 ```
 
 
@@ -146,8 +145,7 @@ spiny_counts <- spiny_counts %>%
   mutate(mpa = case_when(site %in% c("IVEE","NAPL") ~ "MPA",
                                        .default = "non_MPA")) %>%
   mutate(treat = case_when(mpa == "MPA" ~ 1,
-                           .default = 0)) %>%
-  ungroup()
+                           .default = 0)) 
 
 ```
 
@@ -168,7 +166,8 @@ head(tidydata)
 
 site_mean <- spiny_counts %>%
   group_by(mpa) %>%
-  summarize(mean_counts = mean(counts))
+  summarize(mean_counts = mean(counts)) %>%
+  ungroup
 ```
 
 
@@ -351,10 +350,12 @@ spiny_counts %>%
 **c.** Compare means of the outcome by treatment group. Using the `tbl_summary()` function from the package [`gt_summary`](https://www.danieldsjoberg.com/gtsummary/articles/tbl_summary.html) 
 
 ```{r}
-tbl_summary(data = spiny_counts,
+spiny_counts %>%
+  ungroup() %>%
+  tbl_summary(.,
             by = "mpa",
             statistic = list(all_continuous() ~ "{mean}"),
-            include = "site")
+            include = "site") 
 ```
 
 ------------------------------------------------------------------------
@@ -377,7 +378,7 @@ print(tbl_1)
 ```
 **b.** Interpret the intercept & predictor coefficients *in your own words*. Use full sentences and write your interpretation of the regression results to be as clear as possible to a non-academic audience.
 
-The intercept = 22.73 is what the lm model estimates the lobster count will be when the treatment is not being applied (when the site is not an MPA site). The predictor coeffient = 5.36 tells us that when the treatment IS applied (the site is an MPA) the estimated lobster count will increase from 22.73 by 5.36. The predictor tells us that sites that are MPAs have a positive effect on lobster counts (lobsters are more abundant).
+The intercept = 22.73 is what the lm model estimates the average lobster count will be when the treatment is not being applied (when the site is not an MPA site). The predictor coeffient = 5.36 tells us that when the treatment IS applied (the site is an MPA) the estimated average lobster count will increase from 22.73 by 5.36. The predictor tells us that sites that are MPAs have a positive effect on lobster counts (lobsters are more abundant), in average, since the model is estimating across all the observations.
 
 **c.** Check the model assumptions using the `check_model` function from the `performance` package
 
@@ -414,7 +415,7 @@ Step 5: Fitting GLMs
 ```{r}
 m2_pois <- glm(counts ~ treat, 
                    data = spiny_counts,
-                   family = poisson) 
+                   family = poisson(link = "log")) 
 
 exp(coef(m2_pois))
 
@@ -431,6 +432,8 @@ Dispersion is the spread/distribution of variability around the mean. A poisson 
 
 **d.** Compare results with previous model, explain change in the significance of the treatment effect
 
+The previous model (OLS) gave us a 5.36 coefficient for the treatment varible, but its p-value was 0.30, which is not statistically significant. Unlike the OLS model, the glm model gave us (when exponentiated) the percent change for one unit increase in the predictor and its p-value was highly significant. The change in the significance of the treatment effect is a result of the original OLS model being a poor fit for our data since we have counts data and overdispersion is present. OLS makes the assumption that our residuals are normally distributed and our data non-discrete, which is not the case here. 
+
 ```{r}
 #HINT1: Incidence Ratio Rate (IRR): Exponentiation of beta returns coefficient which is interpreted as the 'percent change' for a one unit increase in the predictor 
 
@@ -438,18 +441,23 @@ Dispersion is the spread/distribution of variability around the mean. A poisson 
 #
 m2_pois <- glm(counts ~ treat, 
                    data = spiny_counts,
-                   family = poisson) 
+                   family = poisson(link = "log")) 
 
 
 ```
 
 **e.** Check the model assumptions. Explain results.
 
+The posterior predictive check uses data simulated from the model and compares it to the actual observed data. The PPC plot shows a discrepancy between the simulated and the observed outcomes. What the model is predicting is not what is being observed, pointing to a poor model fit. 
+The residual variance as predicted by the model also does not align with the observed, another sign that the model is not capturing the true mechanisms at work within the data. There is no homogeneity in the variance of the observed when compared to the predicted, indicating that model does not capture the differences in variance across our data, it assumes homogeneity. 
+
 **f.** Conduct tests for over-dispersion & zero-inflation. Explain results.
 
 ```{r}
 check_model(m2_pois)
 ```
+
+
 
 ```{r}
 check_overdispersion(m2_pois)
@@ -463,7 +471,7 @@ check_zeroinflation(m2_pois)
 ```
 
 **Zero-inflation explanation**
-The results of the test say that the model did not predict/account for ANY zeros being present in our data. However, our data did contain 27 observations = 0. This underfitting can result in an inflation of our model estimates (making them inaccurate) and therefore leading to unreliable predictions.
+The results of the test say that the model did not predict/account for ANY zeros being present in our data. However, our data did contain 27 observations that were = 0. This means that the model is underfitting our data and our data is inflated - it contains more zero values than the model accounts for.
 
 **g.** Fit a negative binomial model using the function glm.nb() from the package `MASS` and check model diagnostics 
 
@@ -509,6 +517,9 @@ check_model(m3_nb)
 ```
 
 **Comparison of m2_pois & m3_nb**
+
+The coefficient (0.2118) for the treatment variable as predicted by the m3_nb model tells us the change in the log-count of the outcome (counts) for a one-unit increase in the treatment variable. Not only is this a small change in the outcome/ a small treatment effect, but the p-value for the treatment estimate is also not significant (0.218). This indicates, according to m3_nb, that the treatment does not appear to have a strong influence in lobster counts. 
+
 The estimated coefficients of models m2_pois and m3_nb are very similar. However, m2_pois does not allow for zero-inflation and overdispersion. On the other hand, m3_nb tests did not detect overdispersion and the zero-inflation test detected not an underfitting, but rather a small OVERfitting of zeros. 
 
 Despite these encouraging m3_nb results, the m3_nb coefficient p-values indicate that the model does not produce statistically significant estimates. Thus, even if the negative binomial model makes for a better fit, it does not allow us to confidently say that treatment has an effect on lobster count. 
@@ -529,7 +540,9 @@ export_summs(m1_ols, m2_pois, m3_nb,
 ```
 
 **Comparing 3 models**
-The estimated treatment effects are similar between m2_pois and m3_nb, but otherwise vary across models. In the OLS model the treatment coefficient is relatively large, however it is not statistically significant. In the Poisson model the coefficients are smaller and statistically significant but tests revealed both overdispersion and zero-inflation. Lastly, in the NB model tests showed no overdispersion and only a slight overestimation of zero-inflation, but the estimates were not statistically significant. When comparing the models, it is clear that the treatment effect is not stable and not robust. 
+The estimated treatment effects are similar between m1_ols, m2_pois, and m3_nb - when exponentiated, both m3_nb and m2_pois estimate that the outcome will change by a factor of approx 1.236 (exp(0.2118)), or 23.6% (1.236 − 1 = 0.236). m1_ols has a treatment coeff of 5.36, but when transformed to % change, which is (5.36/22.73)*100 = 23.6%, we can clearly see that the estimated treatment effect is basically the same across the 3 models. 
+
+Other than these similarities, the p-values of the estimated treatment effects vary across models. In the OLS model the treatment coefficient is not statistically significant. In the Poisson model the estimates are statistically significant but tests revealed both overdispersion and zero-inflation. Lastly, in the NB model tests showed no overdispersion and only a slight overestimation of zero-inflation, but the estimates were not statistically significant. When comparing the models, it is clear that while the predicted treatment effect may appear stable across models, it is not stable and not robust across different modeling approaches. 
 
 ------------------------------------------------------------------------
 
@@ -544,7 +557,7 @@ Step 7: Building intuition - fixed effects
 
 **c.** Take a look at the regression output. Each coefficient provides a comparison or the difference in means for a specific sub-group in the data. Informally, describe the what the model has estimated at a conceptual level (NOTE: you do not have to interpret coefficients individually)
 
-The model shows how the effect of the treatment is affected by the variable year, what the treatment effect was in the baseline year (2012) and how it changed and compared across following years. In general, the model gives us a more complex and nuanced look at the mechanisms going on in the data. In the baseline year, 2012, MPAs had significantly fewer lobster than non-MPAs. This is also the year when these MPAs were established. And, since lobster counts go up over the years in these MPA sites, it shows that the treatment has had a positive effect on reef sites even if the lobster counts of these aren't dramatically higher than those of non-MPAs. 
+The model shows how the treatment effect is affected by the variable 'year', what the treatment effect was in the baseline year (2012). The interaction term in this case aims at estimating how the treatment effect changed over the years/how the difference in lobster counts between MPAs and non-MPAs changed over the years. In general, the model gives us a more complex and nuanced look at the mechanisms going on in the data. In the baseline year, 2012, MPAs had significantly fewer lobster than non-MPAs. This is also the year when these MPAs were established. And, since lobster counts go up over the years in these MPA sites, it shows that the treatment has had a positive effect on reef sites even if the lobster counts of these aren't dramatically higher than those of non-MPAs. 
 
 **d.** Explain why the main effect for treatment is negative? *Does this result make sense?
 
@@ -572,9 +585,16 @@ The interactions plot supports my responses in c and d above.
 
 ```{r}
 
-interact_plot(m5_fixedeffs, pred = year, modx = treat,
-              outcome.scale = "response") # NOTE: y-axis on log-scale
+ff_counts$predicted_log <- predict(m5_fixedeffs, type = "link")
+ff_counts$predicted_counts <- exp(ff_counts$predicted_log)
 
+interact <- ggplot(ff_counts, aes(x = year, y = predicted_log, color = treat, group = mpa)) +
+    geom_line() +
+    geom_point() +
+    labs(y = "Log of Counts", x = "Year") +
+    theme_minimal()
+
+interact
 # HINT: Change `outcome.scale` to "response" to convert y-axis scale to counts
 ```
 
@@ -616,7 +636,7 @@ Step 8: Reconsider causal identification assumptions
 
 a. Discuss whether you think `spillover effects` are likely in this research context (see Glossary of terms; https://docs.google.com/document/d/1RIudsVcYhWGpqC-Uftk9UTz3PIq6stVyEpT44EPNgpE/edit?usp=sharing)
 
-Yes, spillover effects are relevant in this research context. Lobster can move without any limits between one MPA to another. When fishing pressures change (in both MPAs and non), lobster respond to these ecological and environmental changes in several ways - they may migrate due to increased competition amongst them, they may move toward other reefs due to temp changes, food availability etc.
+Yes, spillover effects are relevant in this research context. Lobster can move without any limits between one MPA to another. When fishing pressures change (in both MPAs and non), lobster respond to these ecological and environmental changes in several ways - they may migrate due to increased competition amongst them, they may move toward other reefs due to temp changes, food availability etc. 
 
 b. Explain why spillover is an issue for the identification of causal effects
 
@@ -624,14 +644,16 @@ The spillover effect is an issue for the identification of causal effects becaus
 
 c. How does spillover relate to impact in this research setting?
 
-Spillover can lead researchers to underestimate or overestimate the efficacy of the treatment, leading to an inaccurate understanding of the benefits of MPAs. This, in turn, would affect the efforts toward creating more MPAs. 
+Spillover can lead researchers to underestimate or overestimate the efficacy of the treatment, leading to an inaccurate understanding of the benefits of MPAs. Spillover can result in lobster counts being distorted by the movement of lobsters between MPAs and non-MPAs. For example, lower fishing pressure in MPAs could cause lobsters to migrate to non-MPA areas where competition is lower, potentially inflating counts in non-MPAs areas. Thus, spillover effects can distort the true impact of MPAs on lobster populations, leading to biased estimates of their effectiveness.
 
 d. Discuss the following causal inference assumptions in the context of the MPA treatment effect estimator. Evaluate if each of the assumption are reasonable: 
     
     1) SUTVA: Stable Unit Treatment Value assumption 
     2) Excludability assumption
     
-Neither of these assumptions are reasonable in the context of the MPA treatment effect estimator. The SUTVA is more than likely violated by the spillover effect since the changes in lobster count do not solely depend on the treatment effect.The lobster count of a non-treated site is affected by the treatment of another site. Lastly, the excludability assumption is violated because other than the spillover effect, there are countless other factors, human and and non-human-related, that affect the health of reefs and the abundance of lobster.
+None of these assumptions are reasonable in the context of the MPA treatment effect estimator. The SUTVA is more than likely violated by the spillover effect since the changes in lobster count do not solely depend on the treatment effect.The lobster count of a non-treated site is affected by the treatment of another site. Furthermore, the treatment is not applied in the exact same way across all treated reefs (MPAs) as there are different levels of protection that an MPA can have. For example, some MPAs like the one in Isla Vista are designated as "no-take" areas, but not all MPAs have this protection nor do they all allow/prohibit the same activities. 
+
+Lastly, the excludability assumption is violated because other than the spillover effect, there are countless other factors, human and and non-human-related, that affect the health of reefs and the abundance of lobster.
 
 ------------------------------------------------------------------------
 
